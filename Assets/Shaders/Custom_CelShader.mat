@@ -65,12 +65,13 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - _Ambient: 0.3
+    - _Ambient: 0.1
     - _BumpScale: 1
     - _Cutoff: 0.5
     - _DetailNormalMapScale: 1
     - _DstBlend: 0
     - _EdgeDiffuse: 0.01
+    - _EdgeDistanceAttenuation: 0
     - _EdgeRim: 0.73
     - _EdgeRimOffset: 0.01
     - _EdgeShadowAttenuation: 0.9
