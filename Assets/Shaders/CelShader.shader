@@ -74,6 +74,14 @@ Shader "Custom/CelShader"
                 float _EdgeRimOffset;
             CBUFFER_END
 
+            float3 StripeTransition(float color, Light light)
+            {
+                float frequency = 20.0;
+                float stripe = sin(color * frequency * 3.14159); // periodic between -1 and 1
+                stripe = saturate(stripe);
+                return lerp(float3(0,0,0), color, stripe);
+            }
+
             /*  lighting notes
             *   diffuse --> dot product of the surface normal and the vector towards the light source
             *   specular --> dot product of the refleciton vector and vector towards the viewer to the power of a shininess constant
@@ -84,21 +92,33 @@ Shader "Custom/CelShader"
             // cel shaded lighting
             float3 GetLighting(Light light, float3 normal, float3 view, half shadow)
             {
-                float shadowAttenuation = shadow;
+                float shadowAttenuation = light.shadowAttenuation;
                 float distanceAttenuation = smoothstep(0.0, _EdgeDistanceAttenuation, light.distanceAttenuation);
                 shadowAttenuation = smoothstep(0.0, _EdgeShadowAttenuation, shadowAttenuation); // smoothstep for cel shaded look
                 float attenuation = distanceAttenuation * shadowAttenuation;
 
                 float diffuse = saturate(dot(normal, light.direction)); // diffuse lighting calculation clamped between 0.0 and 1.0
+
+                // EXPERIMENTAL STRIPE TRANSITION
+                //diffuse = StripeTransition(diffuse, light);
+
                 diffuse *= attenuation; // exclude lighting where there are shadows
 
                 float3 h = SafeNormalize(light.direction + view); // half view dir based on direction and view vectors
                 float specular = saturate(dot(normal, h)); // specular calculation clamped between 0.0 and 1.0
                 float shininess = pow(clamp(_Smoothness, 0, 1), 2.0) * 256.0; // shininess calculation
                 specular = pow(specular, shininess); // final specular calculated to the power of shininess constant
+
+                // EXPERIMENTAL STRIPE TRANSITION
+                //specular = StripeTransition(specular, light);
+
                 specular *= diffuse * _Smoothness; // prevents the specular lighting from showing in shaded area
                 
                 float rim = 1 - dot(view, normal); // rim calculation
+
+                // EXPERIMENTAL STRIPE TRANSITION
+                //rim = StripeTransition(rim, light);
+
                 rim *= pow(diffuse, _RimThreshold); // change rim brightness
 
                 // cell shaded
@@ -139,7 +159,7 @@ Shader "Custom/CelShader"
                 int lightCount = GetAdditionalLightsCount();
                 for (int i = 0; i < lightCount; i++)
                 {
-                    light = GetAdditionalLight(i, IN.positionWS);
+                    light = GetAdditionalLight(i, IN.positionWS, 1);
                     shadow = AdditionalLightRealtimeShadow(i, IN.positionWS);
                     color += GetLighting(light, normal, view, shadow);
                 }
