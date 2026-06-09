@@ -1,5 +1,6 @@
 Shader "Custom/CelShader"
 {
+    // [REFERENCE] (["DISPLAY_NAME"], [TYPE]) = [DEFAULT_VALUE]
     Properties
     {
         [MainColor] _BaseColor("Base Color", Color) = (1, 1, 1, 1)
@@ -36,6 +37,7 @@ Shader "Custom/CelShader"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
 
+            // input into the vertex shader
             struct Attributes
             {
                 float4 positionOS : POSITION;
@@ -44,6 +46,7 @@ Shader "Custom/CelShader"
                 float3 normalOS : NORMAL; // object space normal
             };
 
+            // data passed from vertex to fragment shader
             struct Varyings
             {
                 float4 positionHCS : SV_POSITION;
@@ -99,9 +102,6 @@ Shader "Custom/CelShader"
 
                 float diffuse = saturate(dot(normal, light.direction)); // diffuse lighting calculation clamped between 0.0 and 1.0
 
-                // EXPERIMENTAL STRIPE TRANSITION
-                //diffuse = StripeTransition(diffuse, light);
-
                 diffuse *= attenuation; // exclude lighting where there are shadows
 
                 float3 h = SafeNormalize(light.direction + view); // half view dir based on direction and view vectors
@@ -109,15 +109,9 @@ Shader "Custom/CelShader"
                 float shininess = pow(clamp(_Smoothness, 0, 1), 2.0) * 256.0; // shininess calculation
                 specular = pow(specular, shininess); // final specular calculated to the power of shininess constant
 
-                // EXPERIMENTAL STRIPE TRANSITION
-                //specular = StripeTransition(specular, light);
-
                 specular *= diffuse * _Smoothness; // prevents the specular lighting from showing in shaded area
                 
                 float rim = 1 - dot(view, normal); // rim calculation
-
-                // EXPERIMENTAL STRIPE TRANSITION
-                //rim = StripeTransition(rim, light);
 
                 rim *= pow(diffuse, _RimThreshold); // change rim brightness
 
