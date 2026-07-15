@@ -152,7 +152,7 @@ Shader "Custom/DigitalImpressionism"
                 float isBorder = 1 - smoothstep(0.05 - valueChange, 0.05 + valueChange, noise.z);
                 float3 color1 = lerp(cellColor, float3(1.0, 1.0, 1.0), isBorder);
 
-                return float4(color1, 1); 
+                return float4(noise, 1); 
             }
             ENDHLSL
         }
