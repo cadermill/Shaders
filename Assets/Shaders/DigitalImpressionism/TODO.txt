@@ -1,0 +1,2 @@
+Limit cell center randomization to make cell sizes more consistent
+Hash randomized cell centers for efficiency

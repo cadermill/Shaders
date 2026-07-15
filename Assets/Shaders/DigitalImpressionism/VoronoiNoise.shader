@@ -44,10 +44,16 @@ Shader"Custom/VoronoiNoise"
                 float _CellSize;
             CBUFFER_END
 
+            float3 randomizeCellCenter(float3 cell)
+            {
+                float3 randomOffset = frac(sin(dot(cell, float3(12.9898, 78.233, 37.719))) * 43758.5453);
+                return cell + randomOffset;
+            }
+
             float3 voronoiNoise(float3 pos)
             {
                 float3 cell = floor(pos);
-                float3 cellPos = cell + 0.5;
+                float3 cellPos = randomizeCellCenter(cell);
                 float3 dist = distance(pos, cellPos);
                 return dist;
             }
