@@ -44,18 +44,20 @@ Shader"Custom/VoronoiNoise"
                 float _CellSize;
             CBUFFER_END
 
+            // Function to randomize the cell center based on the cell coordinates
             float3 randomizeCellCenter(float3 cell)
             {
-                float3 randomOffset = frac(sin(dot(cell, float3(12.9898, 78.233, 37.719))) * 43758.5453);
-                return cell + randomOffset;
+                float3 randomOffset = frac(sin(dot(cell, float3(12.9898, 78.233, 37.719))) * 43758.5453); // Pseudo-random offset based on cell coordinates
+                return cell + randomOffset; // Offset between 0 and 1 in each dimension
             }
 
+            // Voronoi noise function
             float3 voronoiNoise(float3 pos)
             {
-                float3 cell = floor(pos);
-                float3 cellPos = randomizeCellCenter(cell);
-                float3 dist = distance(pos, cellPos);
-                return dist;
+                float3 cell = floor(pos); // Floor object position to get the cell coordinates
+                float3 cellCenter = randomizeCellCenter(cell); // Get the randomized cell center
+                float3 dist = distance(pos, cellCenter); // Calculate distance from the object position to the cell center 
+                return dist; 
             }
 
             Varyings vert(Attributes IN)
@@ -63,7 +65,7 @@ Shader"Custom/VoronoiNoise"
                 Varyings OUT;
                 OUT.positionHCS = TransformObjectToHClip(IN.positionOS.xyz);
                 OUT.uv = TRANSFORM_TEX(IN.uv, _BaseMap);
-                OUT.positionOS = IN.positionOS;
+                OUT.positionOS = IN.positionOS; // Pass the object space position to the fragment shader
                 return OUT;
             }
 
@@ -71,8 +73,8 @@ Shader"Custom/VoronoiNoise"
             {
                 half4 color = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, IN.uv) * _BaseColor;
     
-                float3 pos = IN.positionOS.xyz / _CellSize;
-                float3 noise = voronoiNoise(pos);
+                float3 pos = IN.positionOS.xyz / _CellSize; // Allow cell size to be adjusted via a property
+                float3 noise = voronoiNoise(pos); 
                 return float4(noise, 1);
 }
             ENDHLSL
