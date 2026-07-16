@@ -45,18 +45,22 @@ Shader"Custom/VoronoiNoise"
             CBUFFER_END
 
             // Function to randomize the cell center based on the cell coordinates
-            float3 randomizeCellCenter(float3 cell)
+            // Returns the coordinates of the cell center and a unique random identifier
+            float4 randomizeCellCenter(float3 cell)
             {
                 float3 randomOffset = frac(sin(dot(cell, float3(12.9898, 78.233, 37.719))) * 43758.5453); // Pseudo-random offset based on cell coordinates
-                return cell + randomOffset; // Offset between 0 and 1 in each dimension
+                float randomId = frac(sin(dot(sin(cell), float3(12.9898, 78.233, 37.719))) * 43758.5453); // Unique random identifier for the cell
+                return float4(cell + randomOffset, randomId); // Offset between 0 and 1 in each dimension
             }
 
             // Voronoi noise function
-            float3 voronoiNoise(float3 pos)
+            // Returns the minimum distance to the nearest cell center and the cell's random identifier
+            float2 voronoiNoise(float3 pos)
             {
                 float3 cell = floor(pos); // Floor object position to get the cell coordinates
 
                 float minDist = 1e10; // Initialize minimum distance to a large value
+                float4 closestCell = float4(0, 0, 0, 0); // Initialize closest cell
                 [unroll]
                 for (int x = -1; x <= 1; x++)
                 {
@@ -66,13 +70,17 @@ Shader"Custom/VoronoiNoise"
                         [unroll]
                         for (int z = -1; z <= 1; z++)
                         {
-                            float3 cellCenter = randomizeCellCenter(cell + float3(x, y, z)); // Get the cell center for neighboring cells
-                            float dist = distance(pos, cellCenter);
-                            if (dist < minDist) { minDist = dist; }
+                            float4 cellCenter = randomizeCellCenter(cell + float3(x, y, z)); // Get the cell center for neighboring cells
+                            float dist = distance(pos, cellCenter.xyz); // Take cell coordinates only
+                            if (dist < minDist) 
+                            { 
+                                minDist = dist; 
+                                closestCell = cellCenter;
+                            }
                         }
                     }
                 }
-                return minDist;
+                return float2(minDist, closestCell.w); // Return the minimum distance and the closest cell center
             }
 
             Varyings vert(Attributes IN)
@@ -89,8 +97,8 @@ Shader"Custom/VoronoiNoise"
                 half4 color = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, IN.uv) * _BaseColor;
     
                 float3 pos = IN.positionOS.xyz / _CellSize; // Allow cell size to be adjusted via a property
-                float3 noise = voronoiNoise(pos); 
-                return float4(noise, 1);
+                float2 noise = voronoiNoise(pos); 
+                return float4(noise.y, noise.y, noise.y, 1);
 }
             ENDHLSL
         }
