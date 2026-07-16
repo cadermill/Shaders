@@ -55,9 +55,24 @@ Shader"Custom/VoronoiNoise"
             float3 voronoiNoise(float3 pos)
             {
                 float3 cell = floor(pos); // Floor object position to get the cell coordinates
-                float3 cellCenter = randomizeCellCenter(cell); // Get the randomized cell center
-                float3 dist = distance(pos, cellCenter); // Calculate distance from the object position to the cell center 
-                return dist; 
+
+                float minDist = 1e10; // Initialize minimum distance to a large value
+                [unroll]
+                for (int x = -1; x <= 1; x++)
+                {
+                    [unroll]
+                    for (int y = -1; y <= 1; y++)
+                    {
+                        [unroll]
+                        for (int z = -1; z <= 1; z++)
+                        {
+                            float3 cellCenter = randomizeCellCenter(cell + float3(x, y, z)); // Get the cell center for neighboring cells
+                            float dist = distance(pos, cellCenter);
+                            if (dist < minDist) { minDist = dist; }
+                        }
+                    }
+                }
+                return minDist;
             }
 
             Varyings vert(Attributes IN)
