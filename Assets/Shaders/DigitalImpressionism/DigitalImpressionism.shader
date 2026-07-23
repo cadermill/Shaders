@@ -89,7 +89,10 @@ Shader"Custom/DigitalImpressionism"
             {
                 float3 lightDir = normalize(light.direction); // Get the direction of the main light
                 float diffuse = saturate(dot(normal, lightDir)); // Calculate the diffuse lighting based on the normal and light direction
-                return light.color * diffuse; // Multiply the light color by the diffuse lighting
+                
+                float3 ambient = SampleSH(normal); // Sample the spherical harmonics for ambient lighting
+
+                return light.color * diffuse + ambient; // Multiply the light color by the diffuse lighting and add ambient
             }
 
             Varyings vert(Attributes IN)
