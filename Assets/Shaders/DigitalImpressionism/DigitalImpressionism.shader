@@ -35,6 +35,7 @@ Shader"Custom/DigitalImpressionism"
                 float2 uv : TEXCOORD0;
                 float4 positionOS : TEXCOORD1;
                 float3 normalOS : TEXCOORD2; // object space normal
+                float3 positionWS : TEXCOORD3; // world space position
             };
 
             TEXTURE2D(_BaseMap);
@@ -90,9 +91,9 @@ Shader"Custom/DigitalImpressionism"
                 float3 lightDir = normalize(light.direction); // Get the direction of the main light
                 float diffuse = saturate(dot(normal, lightDir)); // Calculate the diffuse lighting based on the normal and light direction
                 
-                float3 ambient = SampleSH(normal); // Sample the spherical harmonics for ambient lighting
+                float3 ambient = SampleSH(normal); // Sample the ambient lighting using spherical harmonics
 
-                return light.color * diffuse + ambient; // Multiply the light color by the diffuse lighting and add ambient
+                return light.color * (diffuse + ambient); // Multiply the light color by the diffuse lighting and add ambient
             }
 
             Varyings vert(Attributes IN)
@@ -102,6 +103,7 @@ Shader"Custom/DigitalImpressionism"
                 OUT.uv = TRANSFORM_TEX(IN.uv, _BaseMap);
                 OUT.positionOS = IN.positionOS; // Pass the object space position to the fragment shader
                 OUT.normalOS = IN.normalOS; // Pass the object space normal to the fragment shader
+                OUT.positionWS = GetVertexPositionInputs(IN.positionOS).positionWS;
                 return OUT;
             }
 
@@ -116,6 +118,13 @@ Shader"Custom/DigitalImpressionism"
                 float3 normalWS = TransformObjectToWorldNormal(normalOS); // Transform the normal to world space
                 Light mainLight = GetMainLight(); // Get the main light in the scene
                 float3 lightColor = getLighting(normalWS, mainLight);
+
+                // Additional lights
+                for (int i = 0; i < GetAdditionalLightsCount(); i++)
+                {
+                    Light additionalLight = GetAdditionalLight(i, IN.positionWS, 1);
+                    lightColor += getLighting(normalWS, additionalLight);
+                }
 
                 return float4(color.rgb * lightColor, color.a); // Multiply the base color by the diffuse lighting
 }
