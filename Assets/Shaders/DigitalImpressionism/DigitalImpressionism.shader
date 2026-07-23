@@ -1,11 +1,11 @@
-Shader "Custom/DigitalImpressionism"
+Shader"Custom/DigitalImpressionism"
 {
     Properties
     {
         [MainColor] _BaseColor("Base Color", Color) = (1, 1, 1, 1)
         [MainTexture] _BaseMap("Base Map", 2D) = "white"
 
-        _CellSize ("Cell Size", Float) = 0.1
+        _CellSize("Cell Size", float) = 1.0
     }
 
     SubShader
@@ -20,18 +20,21 @@ Shader "Custom/DigitalImpressionism"
             #pragma fragment frag
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
 
             struct Attributes
             {
                 float4 positionOS : POSITION;
                 float2 uv : TEXCOORD0;
+                float3 normalOS : NORMAL; // object space normal
             };
 
             struct Varyings
             {
                 float4 positionHCS : SV_POSITION;
                 float2 uv : TEXCOORD0;
-                float3 positionOS : TEXCOORD1;
+                float4 positionOS : TEXCOORD1;
+                float3 normalOS : TEXCOORD2; // object space normal
             };
 
             TEXTURE2D(_BaseMap);
@@ -44,90 +47,49 @@ Shader "Custom/DigitalImpressionism"
                 float _CellSize;
             CBUFFER_END
 
-            float rand3dTo1d(float3 value, float3 dotDir = float3(12.9898, 78.233, 37.719))
+            // Function to randomize the cell center based on the cell coordinates
+            // Returns the coordinates of the cell center
+            float3 randomizeCellCenter(float3 cell)
             {
-	            //make value smaller to avoid artefacts
-	            float3 smallValue = sin(value);
-	            //get scalar value from 3d vector
-	            float random = dot(smallValue, dotDir);
-	            //make value more random by making it bigger and then taking the factional part
-	            random = frac(sin(random) * 143758.5453);
-	            return random;
+                float3 randomOffset = frac(sin(dot(cell, float3(12.9898, 78.233, 37.719))) * 43758.5453); // Pseudo-random offset based on cell coordinates
+                return float3(cell + randomOffset); // Offset between 0 and 1 in each dimension
             }
 
-            float3 rand3dTo3d(float3 value){
-	            return float3(
-		            rand3dTo1d(value, float3(12.989, 78.233, 37.719)),
-		            rand3dTo1d(value, float3(39.346, 11.135, 83.155)),
-		            rand3dTo1d(value, float3(73.156, 52.235, 09.151))
-	            );
-            }
+            // Voronoi noise function
+            // Returns the cell's position in object space and minimum distance to the nearest cell center
+            float4 voronoiNoise(float3 pos)
+            {
+                float3 cell = floor(pos); // Floor object position to get the cell coordinates
 
-            float rand1dTo1d(float value, float mutator = 0.546){
-	            float random = frac(sin(value + mutator) * 143758.5453);
-	            return random;
-            }
-
-            float3 voronoiNoise(float3 value){
-                float3 baseCell = floor(value);
-
-                //first pass to find the closest cell
-                float minDistToCell = 10;
-                float3 toClosestCell;
-                float3 closestCell;
+                float minDist = 1e10; // Initialize minimum distance to a large value
+                float3 closestCell = float3(0, 0, 0); // Initialize closest cell
                 [unroll]
-                for(int x1=-1; x1<=1; x1++){
+                for (int x = -1; x <= 1; x++)
+                {
                     [unroll]
-                    for(int y1=-1; y1<=1; y1++){
+                    for (int y = -1; y <= 1; y++)
+                    {
                         [unroll]
-                        for(int z1=-1; z1<=1; z1++){
-                            float3 cell = baseCell + float3(x1, y1, z1);
-                            float3 cellPosition = cell + rand3dTo3d(cell);
-                            float3 toCell = cellPosition - value;
-                            float distToCell = length(toCell);
-                            if(distToCell < minDistToCell){
-                                minDistToCell = distToCell;
-                                closestCell = cell;
-                                toClosestCell = toCell;
+                        for (int z = -1; z <= 1; z++)
+                        {
+                            float3 cellCenter = randomizeCellCenter(cell + float3(x, y, z)); // Get the cell center for neighboring cells
+                            float dist = distance(pos, cellCenter);
+                            if (dist < minDist) 
+                            { 
+                                minDist = dist; 
+                                closestCell = cellCenter;
                             }
                         }
                     }
                 }
-
-                //second pass to find the distance to the closest edge
-                float minEdgeDistance = 10;
-                [unroll]
-                for(int x2=-1; x2<=1; x2++){
-                    [unroll]
-                    for(int y2=-1; y2<=1; y2++){
-                        [unroll]
-                        for(int z2=-1; z2<=1; z2++){
-                            float3 cell = baseCell + float3(x2, y2, z2);
-                            float3 cellPosition = cell + rand3dTo3d(cell);
-                            float3 toCell = cellPosition - value;
-
-                            float3 diffToClosestCell = abs(closestCell - cell);
-                            bool isClosestCell = diffToClosestCell.x + diffToClosestCell.y + diffToClosestCell.z < 0.1;
-                            if(!isClosestCell){
-                                float3 toCenter = (toClosestCell + toCell) * 0.5;
-                                float3 cellDifference = normalize(toCell - toClosestCell);
-                                float edgeDistance = dot(toCenter, cellDifference);
-                                minEdgeDistance = min(minEdgeDistance, edgeDistance);
-                            }
-                        }
-                    }
-                }
-
-                float random = rand3dTo1d(closestCell);
-                return float3(minDistToCell, random, minEdgeDistance);
+                return float4(closestCell, minDist); // Return the closest cell center and the distance to it
             }
 
-            float3 rand1dTo3d(float value){
-	            return float3(
-		            rand1dTo1d(value, 3.9812),
-		            rand1dTo1d(value, 7.1536),
-		            rand1dTo1d(value, 5.7241)
-	            );
+            float3 getLighting(float3 normal, Light light)
+            {
+                float3 lightDir = normalize(light.direction); // Get the direction of the main light
+                float diffuse = saturate(dot(normal, lightDir)); // Calculate the diffuse lighting based on the normal and light direction
+                return light.color * diffuse; // Multiply the light color by the diffuse lighting
             }
 
             Varyings vert(Attributes IN)
@@ -135,25 +97,25 @@ Shader "Custom/DigitalImpressionism"
                 Varyings OUT;
                 OUT.positionHCS = TransformObjectToHClip(IN.positionOS.xyz);
                 OUT.uv = TRANSFORM_TEX(IN.uv, _BaseMap);
-                OUT.positionOS = IN.positionOS.xyz;
-
+                OUT.positionOS = IN.positionOS; // Pass the object space position to the fragment shader
+                OUT.normalOS = IN.normalOS; // Pass the object space normal to the fragment shader
                 return OUT;
             }
 
             half4 frag(Varyings IN) : SV_Target
             {
                 half4 color = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, IN.uv) * _BaseColor;
+    
+                float3 pos = IN.positionOS.xyz / _CellSize; // Allow cell size to be adjusted via a property
+                float4 noise = voronoiNoise(pos); 
 
-                float3 value = IN.positionOS.xyz / _CellSize;
-                float3 noise = voronoiNoise(value);
+                float3 normalOS = normalize(noise.xyz - IN.positionOS.xyz); // Calculate the normal based on the closest cell center
+                float3 normalWS = TransformObjectToWorldNormal(normalOS); // Transform the normal to world space
+                Light mainLight = GetMainLight(); // Get the main light in the scene
+                float3 lightColor = getLighting(normalWS, mainLight);
 
-                float3 cellColor = rand1dTo3d(noise.y); 
-                float valueChange = fwidth(value.z) * 0.5;
-                float isBorder = 1 - smoothstep(0.05 - valueChange, 0.05 + valueChange, noise.z);
-                float3 color1 = lerp(cellColor, float3(1.0, 1.0, 1.0), isBorder);
-
-                return float4(noise, 1); 
-            }
+                return float4(color.rgb * lightColor, color.a); // Multiply the base color by the diffuse lighting
+}
             ENDHLSL
         }
     }
