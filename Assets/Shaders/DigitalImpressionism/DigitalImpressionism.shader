@@ -7,7 +7,7 @@ Shader"Custom/DigitalImpressionism"
 
         _CellSize("Cell Size", float) = 10.0
         [Toggle] _RandomizeCellColor("Randomize Cell Color", Float) = 0
-        _ColorVariation("Color Variation", float) = 0.1
+        _ColorVariation("Color Variation", float) = 0.2
     }
 
     SubShader
@@ -127,7 +127,7 @@ Shader"Custom/DigitalImpressionism"
             {
                 half4 color = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, IN.uv) * _BaseColor;
     
-                float3 pos = IN.positionOS.xyz * _CellSize; // Allow cell size to be adjusted via a property
+                float3 pos = IN.positionOS.xyz / (_CellSize / 100); // Allow cell size to be adjusted via a property
                 float3 cellCenter = voronoiNoise(pos);
 
                 float3 normalOS = normalize(cellCenter - IN.positionOS.xyz); // Calculate the normal based on the closest cell center

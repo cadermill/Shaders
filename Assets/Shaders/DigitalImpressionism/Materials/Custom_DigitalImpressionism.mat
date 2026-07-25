@@ -31,6 +31,7 @@ Material:
     m_Ints: []
     m_Floats:
     - _CellSize: 10
+    - _ColorVariation: 0.2
     - _RandomizeCellColor: 1
     m_Colors:
     - _BaseColor: {r: 1, g: 1, b: 1, a: 1}
