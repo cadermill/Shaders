@@ -5,7 +5,9 @@ Shader"Custom/DigitalImpressionism"
         [MainColor] _BaseColor("Base Color", Color) = (1, 1, 1, 1)
         [MainTexture] _BaseMap("Base Map", 2D) = "white"
 
-        _CellSize("Cell Size", float) = 1.0
+        _CellSize("Cell Size", float) = 10.0
+        [Toggle] _RandomizeCellColor("Randomize Cell Color", Float) = 0
+        _ColorVariation("Color Variation", float) = 0.1
     }
 
     SubShader
@@ -46,6 +48,8 @@ Shader"Custom/DigitalImpressionism"
                 float4 _BaseMap_ST;
 
                 float _CellSize;
+                bool _RandomizeCellColor;
+                float _ColorVariation;
             CBUFFER_END
 
             // Function to randomize the cell center based on the cell coordinates
@@ -57,8 +61,8 @@ Shader"Custom/DigitalImpressionism"
             }
 
             // Voronoi noise function
-            // Returns the cell's position in object space and minimum distance to the nearest cell center
-            float4 voronoiNoise(float3 pos)
+            // Returns the cell's position in object space
+            float3 voronoiNoise(float3 pos)
             {
                 float3 cell = floor(pos); // Floor object position to get the cell coordinates
 
@@ -83,17 +87,29 @@ Shader"Custom/DigitalImpressionism"
                         }
                     }
                 }
-                return float4(closestCell, minDist); // Return the closest cell center and the distance to it
+                return closestCell; // Return the closest cell center
             }
 
-            float3 getLighting(float3 normal, Light light)
+            float3 getLighting(float3 normal, Light light, float3 cell)
             {
+                // Diffuse
                 float3 lightDir = normalize(light.direction); // Get the direction of the main light
                 float diffuse = saturate(dot(normal, lightDir)); // Calculate the diffuse lighting based on the normal and light direction
                 
+                // Ambient
                 float3 ambient = SampleSH(normal); // Sample the ambient lighting using spherical harmonics
 
-                return light.color * (diffuse + ambient); // Multiply the light color by the diffuse lighting and add ambient
+                // Final
+                float3 finalColor = light.color * (diffuse + ambient);
+
+                // Randomize cell color based on base color
+                if (_RandomizeCellColor)
+                {
+                    float brightness = lerp(1.0 + _ColorVariation, 1.0 - _ColorVariation, frac(sin(dot(cell, float3(12.9898,78.233,37.719))) * 43758.5453)); // Random brightness factor between 0.9 and 1.1
+                    finalColor *= brightness; // Modulate the final color with the random color
+                }
+
+                return finalColor;
             }
 
             Varyings vert(Attributes IN)
@@ -111,19 +127,19 @@ Shader"Custom/DigitalImpressionism"
             {
                 half4 color = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, IN.uv) * _BaseColor;
     
-                float3 pos = IN.positionOS.xyz / _CellSize; // Allow cell size to be adjusted via a property
-                float4 noise = voronoiNoise(pos); 
+                float3 pos = IN.positionOS.xyz * _CellSize; // Allow cell size to be adjusted via a property
+                float3 cellCenter = voronoiNoise(pos);
 
-                float3 normalOS = normalize(noise.xyz - IN.positionOS.xyz); // Calculate the normal based on the closest cell center
+                float3 normalOS = normalize(cellCenter - IN.positionOS.xyz); // Calculate the normal based on the closest cell center
                 float3 normalWS = TransformObjectToWorldNormal(normalOS); // Transform the normal to world space
                 Light mainLight = GetMainLight(); // Get the main light in the scene
-                float3 lightColor = getLighting(normalWS, mainLight);
+                float3 lightColor = getLighting(normalWS, mainLight, cellCenter);
 
                 // Additional lights
                 for (int i = 0; i < GetAdditionalLightsCount(); i++)
                 {
                     Light additionalLight = GetAdditionalLight(i, IN.positionWS, 1);
-                    lightColor += getLighting(normalWS, additionalLight);
+                    lightColor += getLighting(normalWS, additionalLight, cellCenter);
                 }
 
                 return float4(color.rgb * lightColor, color.a); // Multiply the base color by the diffuse lighting
