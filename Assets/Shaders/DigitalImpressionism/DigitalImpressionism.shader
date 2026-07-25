@@ -38,6 +38,7 @@ Shader"Custom/DigitalImpressionism"
                 float4 positionOS : TEXCOORD1;
                 float3 normalOS : TEXCOORD2; // object space normal
                 float3 positionWS : TEXCOORD3; // world space position
+                float4 shadowCoord : TEXCOORD4; // shadow coordinates
             };
 
             TEXTURE2D(_BaseMap);
@@ -120,6 +121,7 @@ Shader"Custom/DigitalImpressionism"
                 OUT.positionOS = IN.positionOS; // Pass the object space position to the fragment shader
                 OUT.normalOS = IN.normalOS; // Pass the object space normal to the fragment shader
                 OUT.positionWS = GetVertexPositionInputs(IN.positionOS).positionWS;
+                OUT.shadowCoord = TransformWorldToShadowCoord(OUT.positionWS);
                 return OUT;
             }
 
@@ -132,7 +134,8 @@ Shader"Custom/DigitalImpressionism"
 
                 float3 normalOS = normalize(cellCenter - IN.positionOS.xyz); // Calculate the normal based on the closest cell center
                 float3 normalWS = TransformObjectToWorldNormal(normalOS); // Transform the normal to world space
-                Light mainLight = GetMainLight(); // Get the main light in the scene
+                float4 shadow = IN.shadowCoord;
+                Light mainLight = GetMainLight(shadow); // Get the main light in the scene
                 float3 lightColor = getLighting(normalWS, mainLight, cellCenter);
 
                 // Additional lights
@@ -144,6 +147,40 @@ Shader"Custom/DigitalImpressionism"
 
                 return float4(color.rgb * lightColor, color.a); // Multiply the base color by the diffuse lighting
 }
+            ENDHLSL
+        }
+        Pass
+        {
+            Name "ShadowCaster"
+            Tags { "LightMode" = "ShadowCaster" }
+
+            HLSLPROGRAM
+            #pragma vertex vert
+            #pragma fragment frag
+
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+
+            struct Attributes
+            {
+                float4 positionOS : POSITION;
+            };
+
+            struct Varyings
+            {
+                float4 positionHCS : SV_POSITION;
+            };
+
+            Varyings vert (Attributes IN)
+            {
+                Varyings OUT;
+                OUT.positionHCS = TransformObjectToHClip(IN.positionOS.xyz);
+                return OUT;
+            }
+
+            half4 frag(Varyings IN) : SV_Target
+            {
+                return 0; 
+            }
             ENDHLSL
         }
     }
