@@ -93,7 +93,7 @@ Shader "Custom/CelShader"
             */
 
             // cel shaded lighting
-            float3 GetLighting(Light light, float3 normal, float3 view, half shadow)
+            float3 GetLighting(Light light, float3 normal, float3 view)
             {
                 float shadowAttenuation = light.shadowAttenuation;
                 float distanceAttenuation = smoothstep(0.0, _EdgeDistanceAttenuation, light.distanceAttenuation);
@@ -147,7 +147,7 @@ Shader "Custom/CelShader"
                 float3 view = normalize(IN.viewDirWS);
                 float4 shadow = IN.shadowCoord;
                 Light light = GetMainLight(shadow); // gets the main light in the scene
-                float3 color = GetLighting(light, normal, view, light.shadowAttenuation);
+                float3 color = GetLighting(light, normal, view);
 
                 // add the color of every other light in the scene
                 int lightCount = GetAdditionalLightsCount();
@@ -155,7 +155,7 @@ Shader "Custom/CelShader"
                 {
                     light = GetAdditionalLight(i, IN.positionWS, 1);
                     shadow = AdditionalLightRealtimeShadow(i, IN.positionWS);
-                    color += GetLighting(light, normal, view, shadow);
+                    color += GetLighting(light, normal, view);
                 }
 
                 half4 baseColor = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, IN.uv) * _BaseColor;
