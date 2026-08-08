@@ -154,7 +154,6 @@ Shader "Custom/CelShader"
                 for (int i = 0; i < lightCount; i++)
                 {
                     light = GetAdditionalLight(i, IN.positionWS, 1);
-                    shadow = AdditionalLightRealtimeShadow(i, IN.positionWS);
                     color += GetLighting(light, normal, view);
                 }
 

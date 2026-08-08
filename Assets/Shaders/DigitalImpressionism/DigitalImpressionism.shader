@@ -20,6 +20,11 @@ Shader"Custom/DigitalImpressionism"
 
             #pragma vertex vert
             #pragma fragment frag
+            #pragma multi_compile _ _MAIN_LIGHT_SHADOWS
+            #pragma multi_compile _ _MAIN_LIGHT_SHADOWS_CASCADE
+            #pragma multi_compile_fragment _ _SHADOWS_SOFT
+            #pragma multi_compile _ _ADDITIONAL_LIGHTS
+            #pragma multi_compile _ _ADDITIONAL_LIGHT_SHADOWS
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
@@ -96,12 +101,13 @@ Shader"Custom/DigitalImpressionism"
                 // Diffuse
                 float3 lightDir = normalize(light.direction); // Get the direction of the main light
                 float diffuse = saturate(dot(normal, lightDir)); // Calculate the diffuse lighting based on the normal and light direction
+                diffuse *= light.shadowAttenuation; // Apply shadow attenuation to the diffuse lighting
                 
                 // Ambient
                 float3 ambient = SampleSH(normal); // Sample the ambient lighting using spherical harmonics
 
                 // Final
-                float3 finalColor = light.color * (diffuse + ambient);
+                float3 finalColor = light.color * (diffuse) + (ambient);
 
                 // Randomize cell color based on base color
                 if (_RandomizeCellColor)
