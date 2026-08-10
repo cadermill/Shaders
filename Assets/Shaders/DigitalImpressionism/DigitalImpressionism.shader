@@ -107,7 +107,7 @@ Shader"Custom/DigitalImpressionism"
                 float3 ambient = SampleSH(normal); // Sample the ambient lighting using spherical harmonics
 
                 // Final
-                float3 finalColor = light.color * (diffuse) + (ambient);
+                float3 finalColor = light.color * diffuse + ambient; // Multiply diffuse lighting by color of the light and add ambient AFTERWARD to avoid light color tinting ambient light
 
                 // Randomize cell color based on base color
                 if (_RandomizeCellColor)
@@ -140,7 +140,12 @@ Shader"Custom/DigitalImpressionism"
 
                 float3 normalOS = normalize(cellCenter - IN.positionOS.xyz); // Calculate the normal based on the closest cell center
                 float3 normalWS = TransformObjectToWorldNormal(normalOS); // Transform the normal to world space
-                float4 shadow = IN.shadowCoord;
+
+                // shadow
+                float3 cellCenterOS = cellCenter * (_CellSize / 100); // Convert scaled cell center position back to 1:1 object space
+                float3 cellCenterWS = TransformObjectToWorld(cellCenterOS); // Convert object space posiiton to world space
+                float4 shadow = TransformWorldToShadowCoord(cellCenterWS);
+
                 Light mainLight = GetMainLight(shadow); // Get the main light in the scene
                 float3 lightColor = getLighting(normalWS, mainLight, cellCenter);
 
