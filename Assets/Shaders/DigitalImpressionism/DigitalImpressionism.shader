@@ -142,17 +142,26 @@ Shader"Custom/DigitalImpressionism"
                 float3 normalWS = TransformObjectToWorldNormal(normalOS); // Transform the normal to world space
 
                 // shadow
-                float3 cellCenterOS = cellCenter * (_CellSize / 100); // Convert scaled cell center position back to 1:1 object space
-                float3 cellCenterWS = TransformObjectToWorld(cellCenterOS); // Convert object space posiiton to world space
-                float4 shadow = TransformWorldToShadowCoord(cellCenterWS);
+                // float3 cellCenterOS = cellCenter * (_CellSize / 100); // Convert scaled cell center position back to 1:1 object space
+                // float3 cellCenterWS = TransformObjectToWorld(cellCenterOS); // Convert object space posiiton to world space
+                // float3 fragToCellCenter = cellCenterWS - IN.positionWS;// vector from fragment position to cell center in world space
+                // float3 fragToCellCenterNormalized = normalize(fragToCellCenter); // normalized vector for dot product comparison
+                // float3 fragNormalWS = TransformObjectToWorldNormal(IN.normalOS);
+                // if ( dot(fragToCellCenterNormalized, fragNormalWS) < 0) // if the vector is pointing opposite to the normal, then the cell center is under the mesh
+                // {
+                //     cellCenterWS = cellCenterWS - length(fragToCellCenter) * fragNormalWS;    // calculate position opposite of the cell center to use for shadow attenuation
+                // }
+                // float4 shadow = TransformWorldToShadowCoord(cellCenterWS);
 
-                Light mainLight = GetMainLight(shadow); // Get the main light in the scene
+                Light mainLight = GetMainLight(); // Get the main light in the scene
                 float3 lightColor = getLighting(normalWS, mainLight, cellCenter);
 
                 // Additional lights
                 for (int i = 0; i < GetAdditionalLightsCount(); i++)
                 {
+                    // Additional light needs fragment position to calculate light correctly and cell center position to calculate shadow correctly
                     Light additionalLight = GetAdditionalLight(i, IN.positionWS, 1);
+                    // additionalLight.shadowAttenuation = AdditionalLightRealtimeShadow(i, IN.positionWS);
                     lightColor += getLighting(normalWS, additionalLight, cellCenter);
                 }
 
@@ -160,39 +169,39 @@ Shader"Custom/DigitalImpressionism"
 }
             ENDHLSL
         }
-        Pass
-        {
-            Name "ShadowCaster"
-            Tags { "LightMode" = "ShadowCaster" }
+        // Pass
+        // {
+        //     Name "ShadowCaster"
+        //     Tags { "LightMode" = "ShadowCaster" }
 
-            HLSLPROGRAM
-            #pragma vertex vert
-            #pragma fragment frag
+        //     HLSLPROGRAM
+        //     #pragma vertex vert
+        //     #pragma fragment frag
 
-            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+        //     #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
 
-            struct Attributes
-            {
-                float4 positionOS : POSITION;
-            };
+        //     struct Attributes
+        //     {
+        //         float4 positionOS : POSITION;
+        //     };
 
-            struct Varyings
-            {
-                float4 positionHCS : SV_POSITION;
-            };
+        //     struct Varyings
+        //     {
+        //         float4 positionHCS : SV_POSITION;
+        //     };
 
-            Varyings vert (Attributes IN)
-            {
-                Varyings OUT;
-                OUT.positionHCS = TransformObjectToHClip(IN.positionOS.xyz);
-                return OUT;
-            }
+        //     Varyings vert (Attributes IN)
+        //     {
+        //         Varyings OUT;
+        //         OUT.positionHCS = TransformObjectToHClip(IN.positionOS.xyz);
+        //         return OUT;
+        //     }
 
-            half4 frag(Varyings IN) : SV_Target
-            {
-                return 0; 
-            }
-            ENDHLSL
-        }
+        //     half4 frag(Varyings IN) : SV_Target
+        //     {
+        //         return 0; 
+        //     }
+        //     ENDHLSL
+        // }
     }
 }
