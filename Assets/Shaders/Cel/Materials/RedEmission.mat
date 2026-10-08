@@ -138,9 +138,9 @@ Material:
     - _XRMotionVectorsPass: 1
     - _ZWrite: 1
     m_Colors:
-    - _BaseColor: {r: 0.5856285, g: 0, b: 1, a: 1}
-    - _Color: {r: 0.58562845, g: 0, b: 1, a: 1}
-    - _EmissionColor: {r: 8.784428, g: 0, b: 15, a: 15}
+    - _BaseColor: {r: 0, g: 1, b: 0.21017551, a: 1}
+    - _Color: {r: 0, g: 1, b: 0.21017548, a: 1}
+    - _EmissionColor: {r: 0, g: 15, b: 3.1526327, a: 15}
     - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
