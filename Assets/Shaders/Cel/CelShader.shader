@@ -122,8 +122,7 @@ Shader "Custom/CelShader"
 
                 float3 finalLight = diffuse + max(specular, rim);
                 float3 ambient = SampleSH(normal);
-                finalLight += ambient;
-                return light.color * finalLight; // multiply by light color
+                return light.color * finalLight + ambient; // multiply by light color
             }
 
             Varyings vert(Attributes IN)
