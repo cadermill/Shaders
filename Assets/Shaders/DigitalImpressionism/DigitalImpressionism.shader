@@ -16,6 +16,8 @@ Shader"Custom/DigitalImpressionism"
 
         Pass
         {
+            Tags { "LightMode" = "UniversalForward" }
+
             HLSLPROGRAM
 
             #pragma vertex vert
