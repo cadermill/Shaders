@@ -6,15 +6,15 @@ Shader "Custom/CelShader"
         [MainColor] _BaseColor("Base Color", Color) = (1, 1, 1, 1)
         [MainTexture] _BaseMap("Base Map", 2D) = "white"
 
-        _Smoothness ("Smoothness", Float) = 0.5
-        _RimThreshold ("Rim Threshold", Float) = 0.5
+        _Smoothness ("Smoothness", Float) = 0.6
+        _RimThreshold ("Rim Threshold", Float) = 0.1
 
-        _EdgeDiffuse("Edge Diffuse", Float) = 1.0
-        _EdgeSpecular("Edge Specular", Float) = 1.0
-        _EdgeSpecularOffset("Edge Specular Offset", Float) = 0.0
+        _EdgeDiffuse("Edge Diffuse", Float) = 0.01
+        _EdgeSpecular("Edge Specular", Float) = 0.01
+        _EdgeSpecularOffset("Edge Specular Offset", Float) = 0.1
         _EdgeShadowAttenuation("Edge Shadow Attenuation", Float) = 0.9
-        _EdgeDistanceAttenuation("Edge Distance Attenuation", Float) = 0.1
-        _EdgeRim("Edge Rim", Float) = 1.0
+        _EdgeDistanceAttenuation("Edge Distance Attenuation", Float) = 0.01
+        _EdgeRim("Edge Rim", Float) = 0.7
         _EdgeRimOffset("Edge Rim Offset", Float) = 0.0
     }
 
@@ -24,6 +24,9 @@ Shader "Custom/CelShader"
 
         Pass
         {
+            Name "Forward Pass"
+            Tags { "LightMode" = "UniversalForward" }
+
             HLSLPROGRAM
 
             #pragma vertex vert
@@ -193,6 +196,49 @@ Shader "Custom/CelShader"
             half4 frag(Varyings IN) : SV_Target
             {
                 return 0; 
+            }
+            ENDHLSL
+        }
+
+        Pass
+        {
+            Name "DepthNormalsPass"
+            Tags { "LightMode" = "DepthNormals" }
+
+            ZWrite On
+            ZTest LEqual
+
+            HLSLPROGRAM
+            #pragma vertex vert
+            #pragma fragment frag
+
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+
+            struct Attributes
+            {
+                float4 positionOS : POSITION;
+                float3 normalOS : NORMAL;
+            };
+
+            struct Varyings
+            {
+                float4 positionHCS : SV_POSITION;
+                float3 normalWS : TEXCOORD0;
+            };
+
+            Varyings vert (Attributes IN)
+            {
+                Varyings OUT;
+                OUT.positionHCS = TransformObjectToHClip(IN.positionOS.xyz);
+                OUT.normalWS = TransformObjectToWorldNormal(IN.normalOS);
+                return OUT;
+            }
+
+            half4 frag(Varyings IN) : SV_Target
+            {
+                // Return the normal as a value between 0 and 1
+                float3 normalWS = normalize(IN.normalWS);
+                return float4(normalWS * 0.5 + 0.5, 1);
             }
             ENDHLSL
         }
