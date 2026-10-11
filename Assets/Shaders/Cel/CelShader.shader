@@ -238,7 +238,7 @@ Shader "Custom/CelShader"
             {
                 // Return the normal as a value between 0 and 1
                 float3 normalWS = normalize(IN.normalWS);
-                return float4(normalWS * 0.5 + 0.5, 1);
+                return float4(normalWS, 1);
             }
             ENDHLSL
         }
